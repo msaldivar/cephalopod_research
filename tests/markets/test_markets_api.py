@@ -1,22 +1,23 @@
+import logging
+import numbers
 from unittest import TestCase
 
-from cephalopod_research.tests import config
-from cephalopod_research.tests.config import cw_api
+# from cephalopod_research.tests.config import cw_api
+from cephalopod_research.api.markets_api import CryptowatchMarketsAPIWrapper
+
+logger = logging.getLogger(__name__)
 
 
 class TestListMarkets(TestCase):
     """Test class for /markets endpoint"""
+    cw_api = CryptowatchMarketsAPIWrapper()
 
     def test_list_all_markets(self):
         """Check return of /markets endpoint returns all markets for all exchanges."""
 
-        url = config.API_BASE_URL + 'markets'
-        response = cw_api.get(
-            url,
-            headers=config.headers,
-            verify=True,
-            timeout=(5, 20),
-            allow_redirects=True,
+        logger.debug('Test list all markets')
+        response = self.cw_api.get(
+            params='markets'
         )
         rjson = response.json()
 
@@ -43,13 +44,9 @@ class TestListMarkets(TestCase):
     def test_list_markets_limit(self):
         """Check return of /markets?limit=2 endpoint returns all markets for all exchanges."""
 
-        url = config.API_BASE_URL + 'markets?limit=2'
-        response = cw_api.get(
-            url,
-            headers=config.headers,
-            verify=True,
-            timeout=(5, 20),
-            allow_redirects=True,
+        logger.debug('Test limit 2 markets')
+        response = self.cw_api.get(
+            params='markets?limit=2'
         )
         rjson = response.json()
 
@@ -64,32 +61,105 @@ class TestListMarkets(TestCase):
             assert 'route' in rjson['result'][i]
 
     def test_list_markets_limit_errors(self):
-        """Check return of /markets?limit forcing errors."""
+        """Check return of /markets?limit - forcing errors."""
 
-        # limit should only work between [1-20000]
-
-        # test negative limit - 400 Bad Request
-        url = config.API_BASE_URL + 'markets?limit=-1'
-        response = cw_api.get(
-            url,
-            headers=config.headers,
-            verify=True,
-            timeout=(5, 20),
-            allow_redirects=True,
+        logger.debug('Test negative int value for limit - expect status code 400')
+        response = self.cw_api.get(
+            params='markets?limit=-1'
         )
         assert response.status_code == 400
 
-        url = config.API_BASE_URL + 'markets?limit=abc'
-        response = cw_api.get(
-            url,
-            headers=config.headers,
-            verify=True,
-            timeout=(5, 20),
-            allow_redirects=True,
+        logger.debug('Test non-int value, abc - expect status code 400')
+        response = self.cw_api.get(
+            params='markets?limit=abc'
         )
         assert response.status_code == 400
 
     def test_details_of_market(self):
         """"""
 
+        exchange = 'kraken'
+        pair = 'btcusd'
+        logger.debug(f'Get the market details for the exchange:{exchange} and pair:{pair}')
+        response = self.cw_api.get(
+            params=f'markets/{exchange}/{pair}'
+        )
+        rjson = response.json()
 
+        assert response.status_code == 200, rjson
+
+        assert rjson['result']['id'] == 87
+        assert rjson['result']['exchange'] == exchange
+        assert rjson['result']['pair'] == pair
+        assert rjson['result']['active']
+        assert len(rjson['result']['routes']) == 5
+
+    def test_details_of_market_error(self):
+        """Test 404 error by passing a fake pair - using Bioshock currency value Adam."""
+
+        exchange = 'kraken'
+        pair = 'btcadam'
+        logger.debug(f'Get the market details for the exchange:{exchange} and nonexistent pair:{pair}')
+
+        response = self.cw_api.get(
+            params=f'markets/{exchange}/{pair}'
+        )
+        rjson = response.json()
+
+        assert response.status_code == 404, rjson
+        assert rjson['error'] == 'Instrument not found', rjson['error']
+
+    def test_current_market_price(self):
+        """Test getting current market price of btcusd on kraken"""
+
+        exchange = 'kraken'
+        pair = 'btcusd'
+        logger.debug(f'Get the price for {pair} on exchange {exchange}')
+        response = self.cw_api.get(
+            params=f'markets/{exchange}/{pair}/price'
+        )
+        rjson = response.json()
+
+        assert response.status_code == 200, rjson
+        assert isinstance(rjson['result']['price'], numbers.Number)
+
+    def test_market_trades_with_limit(self):
+        """Test getting the most recent trades."""
+
+        exchange = 'kraken'
+        pair = 'btcusd'
+        limit = 'limit=1'
+        response = self.cw_api.get(
+            params=f'markets/{exchange}/{pair}/trades?{limit}'
+        )
+        rjson = response.json()
+
+        assert response.status_code == 200, rjson
+        assert len(rjson['result']) == 1
+        assert len(rjson['result'][0]) == 4
+
+    def test_market_24H_summary(self):
+        """Test getting the markets summary from Kraken for btcusd"""
+
+        exchange = 'kraken'
+        pair = 'btcusd'
+        response = self.cw_api.get(
+            params=f'markets/{exchange}/{pair}/summary'
+        )
+        rjson = response.json()
+
+        assert response.status_code == 200, rjson
+
+        assert len(rjson['result']) == 3
+        assert len(rjson['result']['price']) == 4
+        assert len(rjson['result']['price']['change']) == 2
+
+        assert isinstance(rjson['result']['price']['last'], numbers.Number)
+        assert isinstance(rjson['result']['price']['high'], numbers.Number)
+        assert isinstance(rjson['result']['price']['low'], numbers.Number)
+
+        assert isinstance(rjson['result']['price']['change']['percentage'], numbers.Number)
+        assert isinstance(rjson['result']['price']['change']['absolute'], numbers.Number)
+
+        assert isinstance(rjson['result']['volume'], numbers.Number)
+        assert isinstance(rjson['result']['volumeQuote'], numbers.Number)
