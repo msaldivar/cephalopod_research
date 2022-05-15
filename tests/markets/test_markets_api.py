@@ -2,7 +2,6 @@ import logging
 import numbers
 from unittest import TestCase
 
-# from cephalopod_research.tests.config import cw_api
 from cephalopod_research.api.markets_api import CryptowatchMarketsAPIWrapper
 
 logger = logging.getLogger(__name__)
@@ -13,12 +12,11 @@ class TestListMarkets(TestCase):
     cw_api = CryptowatchMarketsAPIWrapper()
 
     def test_list_all_markets(self):
-        """Check return of /markets endpoint returns all markets for all exchanges."""
+        """Test return of /markets endpoint returns all markets for all exchanges."""
 
-        logger.debug('Test list all markets')
-        response = self.cw_api.get(
-            params='markets'
-        )
+        logger.debug('Test list all markets - endpoint /markets')
+
+        response = self.cw_api.get()
         rjson = response.json()
 
         assert response.status_code == 200
@@ -42,17 +40,19 @@ class TestListMarkets(TestCase):
         assert 'route' in rjson['result'][0]
 
     def test_list_markets_limit(self):
-        """Check return of /markets?limit=2 endpoint returns all markets for all exchanges."""
+        """Test return of /markets?limit=2 endpoint."""
 
-        logger.debug('Test limit 2 markets')
+        logger.debug('Test limit param to, 2 markets')
+
         response = self.cw_api.get(
-            params='markets?limit=2'
+            params='?limit=2'
         )
         rjson = response.json()
 
         assert response.status_code == 200
         assert len(rjson['result']) == 2
 
+        # assert an individual result has values
         for i in range(len(rjson['result'])):
             assert 'id' in rjson['result'][i]
             assert 'exchange' in rjson['result'][i]
@@ -64,25 +64,27 @@ class TestListMarkets(TestCase):
         """Check return of /markets?limit - forcing errors."""
 
         logger.debug('Test negative int value for limit - expect status code 400')
+
         response = self.cw_api.get(
-            params='markets?limit=-1'
+            params='?limit=-1'
         )
         assert response.status_code == 400
 
         logger.debug('Test non-int value, abc - expect status code 400')
         response = self.cw_api.get(
-            params='markets?limit=abc'
+            params='?limit=abc'
         )
         assert response.status_code == 400
 
     def test_details_of_market(self):
-        """"""
+        """Test getting market details of Kraken btcusd."""
 
         exchange = 'kraken'
         pair = 'btcusd'
         logger.debug(f'Get the market details for the exchange:{exchange} and pair:{pair}')
+
         response = self.cw_api.get(
-            params=f'markets/{exchange}/{pair}'
+            params=f'/{exchange}/{pair}'
         )
         rjson = response.json()
 
@@ -102,12 +104,12 @@ class TestListMarkets(TestCase):
         logger.debug(f'Get the market details for the exchange:{exchange} and nonexistent pair:{pair}')
 
         response = self.cw_api.get(
-            params=f'markets/{exchange}/{pair}'
+            params=f'/{exchange}/{pair}'
         )
         rjson = response.json()
 
-        assert response.status_code == 404, rjson
-        assert rjson['error'] == 'Instrument not found', rjson['error']
+        assert response.status_code == 404
+        assert rjson['error'] == 'Instrument not found'
 
     def test_current_market_price(self):
         """Test getting current market price of btcusd on kraken"""
@@ -115,12 +117,13 @@ class TestListMarkets(TestCase):
         exchange = 'kraken'
         pair = 'btcusd'
         logger.debug(f'Get the price for {pair} on exchange {exchange}')
+
         response = self.cw_api.get(
-            params=f'markets/{exchange}/{pair}/price'
+            params=f'/{exchange}/{pair}/price'
         )
         rjson = response.json()
 
-        assert response.status_code == 200, rjson
+        assert response.status_code == 200
         assert isinstance(rjson['result']['price'], numbers.Number)
 
     def test_market_trades_with_limit(self):
@@ -129,8 +132,10 @@ class TestListMarkets(TestCase):
         exchange = 'kraken'
         pair = 'btcusd'
         limit = 'limit=1'
+        logger.debug(f'Get the most recent trades of {pair} on exchange {exchange} w/ {limit}')
+
         response = self.cw_api.get(
-            params=f'markets/{exchange}/{pair}/trades?{limit}'
+            params=f'/{exchange}/{pair}/trades?{limit}'
         )
         rjson = response.json()
 
@@ -143,12 +148,14 @@ class TestListMarkets(TestCase):
 
         exchange = 'kraken'
         pair = 'btcusd'
+        logger.debug(f'Test getting the markets summary for {pair} on {exchange}')
+
         response = self.cw_api.get(
-            params=f'markets/{exchange}/{pair}/summary'
+            params=f'/{exchange}/{pair}/summary'
         )
         rjson = response.json()
 
-        assert response.status_code == 200, rjson
+        assert response.status_code == 200
 
         assert len(rjson['result']) == 3
         assert len(rjson['result']['price']) == 4
@@ -163,3 +170,37 @@ class TestListMarkets(TestCase):
 
         assert isinstance(rjson['result']['volume'], numbers.Number)
         assert isinstance(rjson['result']['volumeQuote'], numbers.Number)
+
+    def test_market_order_book(self):
+        """Test getting the orderbook of Kraken btcusd"""
+
+        exchange = 'kraken'
+        pair = 'btcusd'
+        logger.debug(f'Test getting orderbook for {pair} on {exchange}')
+
+        response = self.cw_api.get(
+            params=f'/{exchange}/{pair}/orderbook'
+        )
+        rjson = response.json()
+
+        assert response.status_code == 200
+
+        assert 'asks' in rjson['result']
+        assert 'bids' in rjson['result']
+
+    def test_market_candlesticks(self):
+        """Test getting the ohlc data of Kraken btcusd."""
+
+        exchange = 'kraken'
+        pair = 'btcusd'
+        logger.debug(f'Test getting the ohlc data for {pair} on {exchange}')
+
+        response = self.cw_api.get(
+            params=f'/{exchange}/{pair}/ohlc'
+        )
+        rjson = response.json()
+
+        assert response.status_code == 200
+
+        # 14 time values based on the cryptowatch docs
+        assert len(rjson['result']) == 14
