@@ -1,6 +1,6 @@
 import requests
 
-from cephalopod_research.tests import config
+from tests import config
 
 
 class CryptowatchMarketsAPIWrapper:

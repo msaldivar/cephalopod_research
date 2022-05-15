@@ -2,7 +2,7 @@ import logging
 import numbers
 from unittest import TestCase
 
-from cephalopod_research.api.markets_api import CryptowatchMarketsAPIWrapper
+from api.markets_api import CryptowatchMarketsAPIWrapper
 
 logger = logging.getLogger(__name__)
 
@@ -81,7 +81,7 @@ class TestListMarkets(TestCase):
 
         exchange = 'kraken'
         pair = 'btcusd'
-        logger.debug(f'Get the market details for the exchange:{exchange} and pair:{pair}')
+        # logger.debug(f'Get the market details for the exchange:{exchange} and pair:{pair}')
 
         response = self.cw_api.get(
             params=f'/{exchange}/{pair}'
