@@ -1,4 +1,5 @@
 import requests
+
 from cephalopod_research.tests import config
 
 
@@ -6,7 +7,7 @@ class CryptowatchMarketsAPIWrapper:
     """A simple wrapper for the cryptowatch /markets endpoint"""
 
     def __init__(self):
-        self.url = config.API_BASE_URL
+        self.url = config.API_BASE_URL + 'markets'
         self.cw_api = requests.Session()
 
         if config.API_KEY == 'replace_me':
