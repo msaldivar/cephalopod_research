@@ -15,3 +15,4 @@ Be sure to update the `API_KEY` with a personal key in the `config.py` file
 * I didn't test every possible param, in a real environment every possible param would be tested.
 * I tested several error cases it's important to test more edge cases and rainyday paths within the api
 * Mocking data/using test data can also be used to confirm correct values are returned from the api
+* The api wrapper could be extended to include custom error handling 
